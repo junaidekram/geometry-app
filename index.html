@@ -353,7 +353,8 @@
             expr = expr.replace(/\^/g, '**');
             expr = expr.replace(/\u00b2/g, '**2');
             expr = expr.replace(/\u00b3/g, '**3');
-            var cleaned = expr.replace(/\bMath\.(sqrt|PI|abs|pow)\b/g, '');
+            // Safety: remove known Math tokens and ** operator, then allow only digits/arithmetic
+            var cleaned = expr.replace(/\bMath\.(sqrt|PI|abs|pow)\b/g, '').replace(/\*\*/g, '');
             if (/[^0-9+\-*/.()\s]/.test(cleaned)) return NaN;
             try {
                 var result = new Function('"use strict"; return (' + expr + ')')();
@@ -1157,9 +1158,9 @@
                 btn.addEventListener('click', function() {
                     var sym = btn.dataset.sym;
                     var inp = answerInput;
-                    var s=inp.selectionStart, e2=inp.selectionEnd;
-                    inp.value = inp.value.substring(0,s) + sym + inp.value.substring(e2);
-                    var pos = s + sym.length;
+                    var selStart = inp.selectionStart, selEnd = inp.selectionEnd;
+                    inp.value = inp.value.substring(0, selStart) + sym + inp.value.substring(selEnd);
+                    var pos = selStart + sym.length;
                     inp.setSelectionRange(pos, pos);
                     inp.focus();
                 });
