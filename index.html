@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometry Practice - LSA, TSA & Volume</title>
+    <style>
+        :root {
+            --bg: #0f0f1a;
+            --surface: #1a1a2e;
+            --surface2: #222240;
+            --text: #e0e0f0;
+            --text2: #b0b0c8;
+            --accent: #6c5ce7;
+            --accent2: #a29bfe;
+            --success: #00cec9;
+            --danger: #fd79a8;
+            --warning: #fdcb6e;
+            --cube-color: #74b9ff;
+            --cuboid-color: #ff7675;
+            --cylinder-color: #55efc4;
+            --cone-color: #fdcb6e;
+            --sphere-color: #a29bfe;
+            --hemisphere-color: #fd79a8;
+            --pyramid-color: #ffeaa7;
+            --prism-color: #81ecec;
+            --radius: 16px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background-image:
+                radial-gradient(ellipse at 30% 20%, rgba(108, 92, 231, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 60%, rgba(0, 206, 201, 0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 50% 80%, rgba(253, 121, 168, 0.05) 0%, transparent 50%);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header .logo-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.35);
+        }
+        .header h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #e0e0f0, #c4c4e0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stats-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .stat-pill {
+            background: var(--surface2);
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .stat-pill .icon {
+            font-size: 1rem;
+        }
+        .stat-pill.score {
+            color: var(--success);
+        }
+        .stat-pill.streak {
+            color: var(--warning);
+        }
+        .stat-pill.total {
+            color: var(--text2);
+        }
+
+        .main-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: var(--transition);
+        }
+        .main-card.correct-flash {
+            box-shadow: 0 0 0 3px rgba(0, 206, 201, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: flashGreen 0.6s ease-out;
+        }
+        .main-card.incorrect-flash {
+            box-shadow: 0 0 0 3px rgba(253, 121, 168, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: flashRed 0.6s ease-out;
+        }
+        @keyframes flashGreen {
+            0%,
+            100% {
+                box-shadow: 0 0 0 3px rgba(0, 206, 201, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 0 12px rgba(0, 206, 201, 0), 0 8px 32px rgba(0, 0, 0, 0.3);
+            }
+        }
+        @keyframes flashRed {
+            0%,
+            100% {
+                box-shadow: 0 0 0 3px rgba(253, 121, 168, 0.4), 0 8px 32px rgba(0, 0, 0, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 0 12px rgba(253, 121, 168, 0), 0 8px 32px rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--surface2);
+            border-radius: 12px;
+            overflow: hidden;
+            min-height: 240px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            transition: opacity 0.15s ease;
+        }
+        .shape-label {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text2);
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .problem-area {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .problem-type-badge {
+            display: inline-block;
+            align-self: flex-start;
+            padding: 5px 12px;
+            border-radius: 14px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .badge-lsa {
+            background: rgba(253, 203, 110, 0.2);
+            color: #fdcb6e;
+        }
+        .badge-tsa {
+            background: rgba(0, 206, 201, 0.2);
+            color: #00cec9;
+        }
+        .badge-volume {
+            background: rgba(162, 155, 254, 0.2);
+            color: #a29bfe;
+        }
+        .badge-csa {
+            background: rgba(253, 203, 110, 0.2);
+            color: #fdcb6e;
+        }
+        .problem-text {
+            font-size: 1.05rem;
+            font-weight: 500;
+            line-height: 1.5;
+            color: var(--text);
+        }
+        .problem-text .dim {
+            font-weight: 700;
+            color: #fff;
+        }
+        .dimensions-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .dim-tag {
+            background: var(--surface2);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .dim-tag strong {
+            color: #fff;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .input-row input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            background: var(--surface2);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 500;
+            outline: none;
+            transition: var(--transition);
+            min-width: 0;
+            font-family: inherit;
+        }
+        .input-row input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.12);
+        }
+        .input-row input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+        .btn {
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+            transition: var(--transition);
+            font-family: inherit;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn:active {
+            transform: scale(0.96);
+        }
+        .btn-submit {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+        }
+        .btn-submit:hover {
+            background: #7c6cf0;
+            box-shadow: 0 6px 20px rgba(108, 92, 231, 0.45);
+            transform: translateY(-1px);
+        }
+        .btn-submit:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .btn-new {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-new:hover {
+            background: #2a2a48;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .btn-hint {
+            background: transparent;
+            color: var(--text2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 10px 14px;
+            font-size: 0.8rem;
+        }
+        .btn-hint:hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .feedback {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .feedback.show {
+            display: block;
+        }
+        .feedback.correct {
+            background: rgba(0, 206, 201, 0.12);
+            color: #00cec9;
+            border: 1px solid rgba(0, 206, 201, 0.25);
+        }
+        .feedback.incorrect {
+            background: rgba(253, 121, 168, 0.12);
+            color: #fd79a8;
+            border: 1px solid rgba(253, 121, 168, 0.25);
+        }
+        .feedback .formula-reveal {
+            font-weight: 400;
+            font-size: 0.82rem;
+            margin-top: 4px;
+            color: var(--text2);
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .diff-btn {
+            padding: 8px 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--surface2);
+            color: var(--text2);
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: var(--transition);
+            font-family: inherit;
+            letter-spacing: 0.3px;
+        }
+        .diff-btn:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+        .diff-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(108, 92, 231, 0.3);
+        }
+        .toggle-formulas {
+            margin-left: auto;
+            font-size: 0.78rem;
+            color: var(--accent2);
+            cursor: pointer;
+            font-weight: 600;
+            background: none;
+            border: none;
+            font-family: inherit;
+            transition: var(--transition);
+            letter-spacing: 0.3px;
+        }
+        .toggle-formulas:hover {
+            color: #c4bfff;
+        }
+
+        .formula-sheet {
+            background: var(--surface2);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.78rem;
+            line-height: 1.8;
+            color: var(--text2);
+            columns: 2;
+            column-gap: 16px;
+        }
+        .formula-sheet.open {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        .formula-sheet strong {
+            color: #fff;
+        }
+        .formula-sheet .shape-name {
+            color: var(--accent2);
+            font-weight: 700;
+            font-size: 0.8rem;
+            display: block;
+            margin-top: 4px;
+        }
+        @media (max-width: 400px) {
+            .formula-sheet {
+                columns: 1;
+            }
+        }
+
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            animation: confettiFall 1.2s ease-out forwards;
+        }
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(-120px) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(105vh) rotate(720deg) scale(0.3);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .header h1 {
+                font-size: 1.15rem;
+            }
+            .main-card {
+                padding: 14px;
+                gap: 12px;
+            }
+            .canvas-wrapper {
+                min-height: 200px;
+            }
+            .input-row {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .problem-text {
+                font-size: 0.95rem;
+            }
+            .controls-row {
+                justify-content: center;
+            }
+            .toggle-formulas {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">📐</div>
+                <h1>Geometry Quest</h1>
+            </div>
+            <div class="stats-row">
+                <div class="stat-pill score" id="scorePill">
+                    <span class="icon">⭐</span> <span id="scoreVal">0</span>
+                </div>
+                <div class="stat-pill streak" id="streakPill">
+                    <span class="icon">🔥</span> <span id="streakVal">0</span>
+                </div>
+                <div class="stat-pill total" id="totalPill">
+                    <span class="icon">📝</span> <span id="totalVal">0/0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="main-card" id="mainCard">
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="shapeCanvas" width="300" height="280"></canvas>
+                <span class="shape-label" id="shapeLabel">Shape</span>
+            </div>
+            <div class="problem-area">
+                <span class="problem-type-badge badge-volume" id="problemBadge">Volume</span>
+                <p class="problem-text" id="problemText"></p>
+                <div class="dimensions-list" id="dimsList"></div>
+            </div>
+            <div class="input-row">
+                <input type="text" id="answerInput" placeholder="Enter your answer (numeric)..." autocomplete="off">
+                <button class="btn btn-submit" id="submitBtn">✓ Check</button>
+            </div>
+            <div class="feedback" id="feedback"></div>
+            <div class="controls-row">
+                <button class="diff-btn active" data-diff="easy">Easy</button>
+                <button class="diff-btn" data-diff="medium">Medium</button>
+                <button class="diff-btn" data-diff="hard">Hard</button>
+                <button class="btn btn-hint" id="hintBtn">💡 Hint</button>
+                <button class="btn btn-new" id="newBtn">🔄 New Problem</button>
+                <button class="toggle-formulas" id="toggleFormulas">📋 Formulas</button>
+            </div>
+        </div>
+
+        <!-- Formula Sheet -->
+        <div class="formula-sheet" id="formulaSheet"></div>
+
+        <!-- Confetti Container -->
+        <div class="confetti-container" id="confettiContainer"></div>
+    </div>
+
+    <script>
+        (function() {
+            // ─────────────────────────────────────
+            // DOM ELEMENTS
+            // ─────────────────────────────────────
+            const canvas = document.getElementById('shapeCanvas');
+            const ctx = canvas.getContext('2d');
+            const canvasWrapper = document.getElementById('canvasWrapper');
+            const shapeLabel = document.getElementById('shapeLabel');
+            const problemBadge = document.getElementById('problemBadge');
+            const problemText = document.getElementById('problemText');
+            const dimsList = document.getElementById('dimsList');
+            const answerInput = document.getElementById('answerInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const feedbackDiv = document.getElementById('feedback');
+            const hintBtn = document.getElementById('hintBtn');
+            const newBtn = document.getElementById('newBtn');
+            const mainCard = document.getElementById('mainCard');
+            const formulaSheet = document.getElementById('formulaSheet');
+            const toggleFormulasBtn = document.getElementById('toggleFormulas');
+            const confettiContainer = document.getElementById('confettiContainer');
+            const scoreVal = document.getElementById('scoreVal');
+            const streakVal = document.getElementById('streakVal');
+            const totalVal = document.getElementById('totalVal');
+            const diffBtns = document.querySelectorAll('.diff-btn');
+
+            // ─────────────────────────────────────
+            // STATE
+            // ─────────────────────────────────────
+            let currentProblem = null;
+            let score = 0;
+            let streak = 0;
+            let totalCorrect = 0;
+            let totalAttempts = 0;
+            let difficulty = 'easy';
+            let hintUsed = false;
+            let answered = false;
+
+            // ─────────────────────────────────────
+            // SHAPE DEFINITIONS
+            // ─────────────────────────────────────
+            const shapeDefs = {
+                cube: {
+                    name: 'Cube',
+                    icon: '🟦',
+                    color: '#74b9ff',
+                    colorDark: '#4a9be8',
+                    colorLight: '#a0d2ff',
+                    applicable: ['LSA', 'TSA', 'Volume'],
+                    formulas: {
+                        LSA: '4a²',
+                        TSA: '6a²',
+                        Volume: 'a³',
+                    },
+                    formulaDesc: {
+                        LSA: 'LSA = 4 × a² (area of 4 side faces)',
+                        TSA: 'TSA = 6 × a² (area of all 6 faces)',
+                        Volume: 'Volume = a³',
+                    },
+                    getDimensions: (diff) => {
+                        const range = { easy: [2, 8], medium: [3, 14], hard: [2, 18] } [diff];
+                        const a = randInt(range[0], range[1]);
+                        if (diff === 'hard' && Math.random() < 0.4) a += randDec();
+                        return { a: roundTo(a, 1) };
+                    },
+                    compute: (dims, type) => {
+                        const a = dims.a;
+                        if (type === 'LSA') return 4 * a * a;
+                        if (type === 'TSA') return 6 * a * a;
+                        if (type === 'Volume') return a * a * a;
+                    },
+                    draw: (dims) => drawCube(dims.a),
+                },
+                cuboid: {
+                    name: 'Cuboid',
+                    icon: '🟫',
+                    color: '#ff7675',
+                    colorDark: '#e05555',
+                    colorLight: '#ffa8a7',
+                    applicable: ['LSA', 'TSA', 'Volume'],
+                    formulas: {
+                        LSA: '2h(l+b)',
+                        TSA: '2(lb+bh+hl)',
+                        Volume: 'lbh',
+                    },
+                    formulaDesc: {
+                        LSA: 'LSA = 2h(l + b) = area of 4 side faces',
+                        TSA: 'TSA = 2(lb + bh + hl)',
+                        Volume: 'Volume = l × b × h',
+                    },
+                    getDimensions: (diff) => {
+                        const range = { easy: [2, 7], medium: [3, 12], hard: [2, 16] } [diff];
+                        let l = randInt(range[0], range[1]);
+                        let b = randInt(range[0], range[1]);
+                        let h = randInt(range[0], range[1]);
+                        if (diff === 'hard' && Math.random() < 0.4) l += randDec();
+                        if (diff === 'hard' && Math.random() < 0.4) b += randDec();
+                        if (diff === 'hard' && Math.random() < 0.4) h += randDec();
+                        // Ensure they're not all the same (would be a cube)
+                        if (l === b && b === h && diff !== 'hard') b += 1;
+                        return { l: roundTo(l, 1), b: roundTo(b, 1), h: roundTo(h, 1) };
+                    },
+                    compute: (dims, type) => {
+                        const { l, b, h } = dims;
+                        if (type === 'LSA') return 2 * h * (l + b);
+                        if (type === 'TSA') return 2 * (l * b + b * h + h * l);
+                        if (type === 'Volume') return l * b * h;
+                    },
+                    draw: (dims) => drawCuboid(dims.l, dims.b, dims.h),
+                },
+                cylinder: {
+                    name: 'Cylinder',
+                    icon: '🫙',
+                    color: '#55efc4',
+                    colorDark: '#3dcc9e',
+                    colorLight: '#88f7d8',
+                    applicable: ['CSA', 'TSA', 'Volume'],
+                    formulas: {
+                        CSA: '2πrh',
+                        TSA: '2πr(r+h)',
+                        Volume: 'πr²h',
+                    },
+                    formulaDesc: {
+                        CSA: 'CSA = 2πrh (curved surface area)',
+                        TSA: 'TSA = 2πr(r + h)',
+                        Volume: 'Volume = πr²h',
+                    },
+                    getDimensions: (diff) => {
+                        const range = { easy: [2, 6], medium: [3, 10], hard: [2, 14] } [diff];
+                        const r = randInt(range[0], range[1]);
+                        const h = randInt(range[0] + 1, range[1] + 4);
+                        return { r: roundTo(r, 1), h: roundTo(h, 1) };
+                    },
+                    compute: (dims, type) => {
+                        const { r, h } = dims;
+                        if (type === 'CSA') return 2 * Math.PI * r * h;
+                        if (type === 'TSA') return 2 * Math.PI * r * (r + h);
+                        if (type === 'Volume') return Math.PI * r * r * h;
+                    },
+                    draw: (dims) => drawCylinder(dims.r, dims.h),
+                },
+                cone: {
+                    name: 'Cone',
+                    icon: '🔺',
+                    color: '#fdcb6e',
+                    colorDark: '#e0a930',
+                    colorLight: '#ffe29d',
+                    applicable: ['CSA', 'TSA', 'Volume'],
+                    formulas: {
+                        CSA: 'πrl',
+                        TSA: 'πr(r+l)',
+                        Volume: '⅓πr²h',
+                    },
+                    formulaDesc: {
+                        CSA: 'CSA = πrl where l = √(r²+h²) (slant height)',
+                        TSA: 'TSA = πr(r + l)',
+                        Volume: 'Volume = (1/3)πr²h',
+                    },
+                    getDimensions: (diff) => {
+                        const range = { easy: [2, 6], medium: [3, 10], hard: [2, 14] } [diff];
+                        const r = randInt(range[0], range[1]);
+                        const h = randInt(range[0] + 2, range[1] + 6);
+                        return { r: roundTo(r, 1), h: roundTo(h, 1) };
+                    },
+                    compute: (dims, type) => {
+                        const { r, h } = dims;
+                        const l = Math.sqrt(r * r + h * h);
+                        if (type === 'CSA') return Math.PI * r * l;
+                        if (type === 'TSA') return Math.PI * r * (r + l);
+                        if (type === 'Volume') return (1 / 3) * Math.PI * r * r * h;
+                    },
+                    draw: (dims) => drawCone(dims.r, dims.h),
+                },
+                sphere: {
+                    name: 'Sphere',
+                    icon: '⚪',
+                    color: '#a29bfe',
+                    colorDark: '#7c6ff7',
+                    colorLight: '#c8c3ff',
+                    applicable: ['TSA', 'Volume'],
+                    formulas: {
+                        TSA: '4πr²',
+                        Volume: '⁴⁄₃πr³',
+                    },
+                    formulaDesc: {
+                        TSA: 'TSA = 4πr² (surface area)',
+                        Volume: 'Volume = (4/3)πr³',
+                    },
+                    getDimensions: (diff) => {
+                        const range = { easy: [2, 7], medium: [3, 11], hard: [2, 15] } [diff];
+                        const r = randInt(range[0], range[1]);
+                        return { r: roundTo(r, 1) };
+                    },
+                    compute: (dims, type) => {
+                        const { r } = dims;
+                        if (type === 'TSA' || type === 'LSA') return 4 * Math.PI * r * r;
+                        if (type === 'Volume') return (4 / 3) * Math.PI * r * r * r;
+                    },
+                    draw: (dims) => drawSphere(dims.r),
+                },
+                hemisphere: {
+                    name: 'Hemisphere',
+                    icon: '🌓',
+                    color: '#fd79a8',
+                    colorDark: '#e05580',
+                    colorLight: '#ffb3cc',
+                    applicable: ['CSA', 'TSA', 'Volume'],
+                    formulas: {
+                        CSA: '2πr²',
+                        TSA: '3πr²',
+                        Volume: '⅔πr³',
+                    },
+                    formulaDesc: {
+                        CSA: 'CSA = 2πr² (curved surface)',
+                        TSA: 'TSA = 3πr² (curved + base)',
+                        Volume: 'Volume = (2/3)πr³',
+                    },
+                    getDimensions: (diff) => {
+                        const range = { easy: [2, 7], medium: [3, 11], hard: [2, 15] } [diff];
+                        const r = randInt(range[0], range[1]);
+                        return { r: roundTo(r, 1) };
+                    },
+                    compute: (dims, type) => {
+                        const { r } = dims;
+                        if (type === 'CSA') return 2 * Math.PI * r * r;
+                        if (type === 'TSA') return 3 * Math.PI * r * r;
+                        if (type === 'Volume') return (2 / 3) * Math.PI * r * r * r;
+                    },
+                    draw: (dims) => drawHemisphere(dims.r),
+                },
+                squarePyramid: {
+                    name: 'Square Pyramid',
+                    icon: '🔻',
+                    color: '#ffeaa7',
+                    colorDark: '#d4b84a',
+                    colorLight: '#fff5d0',
+                    applicable: ['LSA', 'TSA', 'Volume'],
+                    formulas: {
+                        LSA: '2al',
+                        TSA: 'a²+2al',
+                        Volume: '⅓a²h',
+                    },
+                    formulaDesc: {
+                        LSA: 'LSA = 2al where l = √(h²+(a/2)²)',
+                        TSA: 'TSA = a² + 2al',
+                        Volume: 'Volume = (1/3)a²h',
+                    },
+                    getDimensions: (diff) => {
+                        const range = { easy: [2, 7], medium: [3, 10], hard: [2, 14] } [diff];
+                        const a = randInt(range[0], range[1]);
+                        const h = randInt(range[0] + 2, range[1] + 5);
+                        return { a: roundTo(a, 1), h: roundTo(h, 1) };
+                    },
+                    compute: (dims, type) => {
+                        const { a, h } = dims;
+                        const l = Math.sqrt(h * h + (a / 2) * (a / 2));
+                        if (type === 'LSA') return 2 * a * l;
+                        if (type === 'TSA') return a * a + 2 * a * l;
+                        if (type === 'Volume') return (1 / 3) * a * a * h;
+                    },
+                    draw: (dims) => drawSquarePyramid(dims.a, dims.h),
+                },
+                triangularPrism: {
+                    name: 'Triangular Prism',
+                    icon: '📐',
+                    color: '#81ecec',
+                    colorDark: '#4ecfcf',
+                    colorLight: '#b5f7f7',
+                    applicable: ['LSA', 'TSA', 'Volume'],
+                    formulas: {
+                        LSA: '3ah',
+                        TSA: '(√3/2)a²+3ah',
+                        Volume: '(√3/4)a²h',
+                    },
+                    formulaDesc: {
+                        LSA: 'LSA = 3ah (equilateral triangle base)',
+                        TSA: 'TSA = (√3/2)a² + 3ah',
+                        Volume: 'Volume = (√3/4)a²h',
+                    },
+                    getDimensions: (diff) => {
+                        const range = { easy: [2, 7], medium: [3, 10], hard: [2, 14] } [diff];
+                        const a = randInt(range[0], range[1]);
+                        const h = randInt(range[0] + 2, range[1] + 6);
+                        return { a: roundTo(a, 1), h: roundTo(h, 1) };
+                    },
+                    compute: (dims, type) => {
+                        const { a, h } = dims;
+                        const sqrt3 = Math.sqrt(3);
+                        if (type === 'LSA') return 3 * a * h;
+                        if (type === 'TSA') return (sqrt3 / 2) * a * a + 3 * a * h;
+                        if (type === 'Volume') return (sqrt3 / 4) * a * a * h;
+                    },
+                    draw: (dims) => drawTriangularPrism(dims.a, dims.h),
+                },
+            };
+
+            // ─────────────────────────────────────
+            // HELPER FUNCTIONS
+            // ─────────────────────────────────────
+            function randInt(min, max) {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+
+            function randDec() {
+                return Math.round(Math.random() * 9) / 10;
+            }
+
+            function roundTo(num, decimals) {
+                const factor = Math.pow(10, decimals);
+                return Math.round(num * factor) / factor;
+            }
+
+            function shuffleArray(arr) {
+                const a = [...arr];
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            function formatNum(n) {
+                if (Number.isInteger(n)) return n.toString();
+                return roundTo(n, 1).toString();
+            }
+
+            // ─────────────────────────────────────
+            // PROBLEM GENERATION
+            // ─────────────────────────────────────
+            function generateProblem() {
+                const shapeKeys = Object.keys(shapeDefs);
+                const shapeKey = shapeKeys[Math.floor(Math.random() * shapeKeys.length)];
+                const shape = shapeDefs[shapeKey];
+                const applicable = shape.applicable;
+                const problemType = applicable[Math.floor(Math.random() * applicable.length)];
+                const dims = shape.getDimensions(difficulty);
+                const correctAnswer = shape.compute(dims, problemType);
+                const roundedAnswer = roundTo(correctAnswer, 2);
+
+                return {
+                    shapeKey,
+                    shape,
+                    problemType,
+                    dims,
+                    correctAnswer: roundedAnswer,
+                    rawAnswer: correctAnswer,
+                };
+            }
+
+            function getProblemTypeLabel(pt) {
+                const map = {
+                    'LSA': 'Lateral Surface Area',
+                    'CSA': 'Curved Surface Area',
+                    'TSA': 'Total Surface Area',
+                    'Volume': 'Volume',
+                };
+                return map[pt] || pt;
+            }
+
+            function getBadgeClass(pt) {
+                if (pt === 'LSA' || pt === 'CSA') return 'badge-lsa';
+                if (pt === 'TSA') return 'badge-tsa';
+                if (pt === 'Volume') return 'badge-volume';
+                return 'badge-volume';
+            }
+
+            function getUnitSuffix(pt) {
+                if (pt === 'Volume') return ' cubic units';
+                return ' square units';
+            }
+
+            function buildProblemText(shape, dims, problemType) {
+                const dimEntries = Object.entries(dims);
+                const dimStr = dimEntries.map(([k, v]) => `${k} = <span class="dim">${formatNum(v)}</span>`).join(', ');
+                const shapeName = shape.name;
+                const typeLabel = getProblemTypeLabel(problemType);
+                const unitSuffix = getUnitSuffix(problemType);
+
+                let text = `Find the <strong>${typeLabel}</strong> of a <strong>${shapeName}</strong>`;
+                if (dimEntries.length > 0) {
+                    text += ` with ${dimStr}`;
+                }
+                text += `.`;
+                if (shapeName === 'Cone' && (problemType === 'CSA' || problemType === 'TSA')) {
+                    text +=
+                        ` <em>(Use slant height l = √(r²+h²), answer in ${unitSuffix.trim()})</em>`;
+                } else {
+                    text += ` <em>(Answer in ${unitSuffix.trim()})</em>`;
+                }
+                return text;
+            }
+
+            // ─────────────────────────────────────
+            // DRAWING FUNCTIONS (Canvas)
+            // ─────────────────────────────────────
+            const W = 300;
+            const H = 280;
+            const cx = W / 2;
+            const cy = H / 2 + 10;
+
+            function clearCanvas() {
+                ctx.clearRect(0, 0, W, H);
+                // Subtle grid
+                ctx.strokeStyle = 'rgba(255,255,255,0.015)';
+                ctx.lineWidth = 0.5;
+                for (let x = 0; x < W; x += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, H);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < H; y += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(W, y);
+                    ctx.stroke();
+                }
+            }
+
+            function drawFace(path, fillColor, strokeColor = 'rgba(255,255,255,0.5)', lineWidth = 1.5) {
+                ctx.beginPath();
+                ctx.moveTo(path[0][0], path[0][1]);
+                for (let i = 1; i < path.length; i++) {
+                    ctx.lineTo(path[i][0], path[i][1]);
+                }
+                ctx.closePath();
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+                ctx.strokeStyle = strokeColor;
+                ctx.lineWidth = lineWidth;
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+            }
+
+            function drawCube(a) {
+                clearCanvas();
+                const scale = Math.min(100 / a, 50);
+                const s = a * scale;
+                const ox = cx - s * 0.7;
+                const oy = cy + s * 0.35;
+                // Isometric offsets
+                const dx = s * 0.85;
+                const dy = s * 0.45;
+                const dz = s * 0.9;
+
+                // Front face (bottom-left to bottom-right, then up)
+                const front = [
+                    [ox, oy],
+                    [ox + dx, oy - dy],
+                    [ox + dx, oy - dy - dz],
+                    [ox, oy - dz]
+                ];
+                // Top face
+                const top = [
+                    [ox, oy - dz],
+                    [ox + dx, oy - dy - dz],
+                    [ox + dx + dx * 0.15, oy - dy - dz - dy * 0.4],
+                    [ox + dx * 0.15, oy - dz - dy * 0.4]
+                ];
+                // Right face
+                const right = [
+                    [ox + dx, oy - dy],
+                    [ox + dx + dx * 0.15, oy - dy - dy * 0.4],
+                    [ox + dx + dx * 0.15, oy - dy - dz - dy * 0.4],
+                    [ox + dx, oy - dy - dz]
+                ];
+
+                drawFace(front, 'rgba(116,185,255,0.5)', 'rgba(255,255,255,0.7)', 1.8);
+                drawFace(top, 'rgba(160,210,255,0.65)', 'rgba(255,255,255,0.7)', 1.8);
+                drawFace(right, 'rgba(74,155,232,0.45)', 'rgba(255,255,255,0.7)', 1.8);
+
+                // Label
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 13px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`a = ${formatNum(a)}`, ox + dx * 0.45, oy - dz - dy * 0.35 - 8);
+            }
+
+            function drawCuboid(l, b, h) {
+                clearCanvas();
+                const maxDim = Math.max(l, b, h);
+                const scale = Math.min(90 / maxDim, 45);
+                const sl = l * scale;
+                const sb = b * scale;
+                const sh = h * scale;
+                const ox = cx - sl * 0.55 - sb * 0.15;
+                const oy = cy + sh * 0.2;
+                const dx = sl * 0.9;
+                const dy = sb * 0.5;
+                const dz = sh * 0.85;
+
+                const front = [
+                    [ox, oy],
+                    [ox + dx, oy - dy * 0.35],
+                    [ox + dx, oy - dy * 0.35 - dz],
+                    [ox, oy - dz]
+                ];
+                const top = [
+                    [ox, oy - dz],
+                    [ox + dx, oy - dy * 0.35 - dz],
+                    [ox + dx + sb * 0.4, oy - dy * 0.35 - dz - dy * 0.55],
+                    [ox + sb * 0.4, oy - dz - dy * 0.55]
+                ];
+                const right = [
+                    [ox + dx, oy - dy * 0.35],
+                    [ox + dx + sb * 0.4, oy - dy * 0.35 - dy * 0.55],
+                    [ox + dx + sb * 0.4, oy - dy * 0.35 - dz - dy * 0.55],
+                    [ox + dx, oy - dy * 0.35 - dz]
+                ];
+
+                drawFace(front, 'rgba(255,118,117,0.5)', 'rgba(255,255,255,0.7)', 1.8);
+                drawFace(top, 'rgba(255,168,167,0.6)', 'rgba(255,255,255,0.7)', 1.8);
+                drawFace(right, 'rgba(224,85,85,0.4)', 'rgba(255,255,255,0.7)', 1.8);
+
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`l=${formatNum(l)} b=${formatNum(b)} h=${formatNum(h)}`, cx, oy - dz - dy *
+                    0.6 - 6);
+            }
+
+            function drawCylinder(r, h) {
+                clearCanvas();
+                const scale = Math.min(55 / r, 70 / h);
+                const sr = r * scale;
+                const sh = h * scale;
+                const tcx = cx;
+                const topY = cy - sh * 0.45;
+                const botY = cy + sh * 0.45;
+                const ellipseRx = sr;
+                const ellipseRy = sr * 0.35;
+
+                // Body fill
+                ctx.beginPath();
+                ctx.moveTo(tcx - ellipseRx, topY);
+                ctx.lineTo(tcx - ellipseRx, botY);
+                ctx.ellipse(tcx, botY, ellipseRx, ellipseRy, 0, Math.PI, 0, true);
+                ctx.lineTo(tcx + ellipseRx, topY);
+                ctx.ellipse(tcx, topY, ellipseRx, ellipseRy, 0, Math.PI, 0, false);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(85,239,196,0.4)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 1.8;
+                ctx.stroke();
+
+                // Top ellipse fill
+                ctx.beginPath();
+                ctx.ellipse(tcx, topY, ellipseRx, ellipseRy, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(136,247,216,0.7)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                ctx.lineWidth = 1.8;
+                ctx.stroke();
+
+                // Bottom ellipse (full for outline, but hidden by body - redraw front half)
+                ctx.beginPath();
+                ctx.ellipse(tcx, botY, ellipseRx, ellipseRy, 0, 0, Math.PI);
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Labels
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`r = ${formatNum(r)}`, tcx, topY - ellipseRy - 10);
+                ctx.fillText(`h = ${formatNum(h)}`, tcx + ellipseRx + 18, (topY + botY) / 2);
+                // Small arrow line for h
+                ctx.beginPath();
+                ctx.moveTo(tcx + ellipseRx + 6, topY);
+                ctx.lineTo(tcx + ellipseRx + 6, botY);
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(tcx + ellipseRx + 2, topY + 4);
+                ctx.lineTo(tcx + ellipseRx + 6, topY);
+                ctx.lineTo(tcx + ellipseRx + 10, topY + 4);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(tcx + ellipseRx + 2, botY - 4);
+                ctx.lineTo(tcx + ellipseRx + 6, botY);
+                ctx.lineTo(tcx + ellipseRx + 10, botY - 4);
+                ctx.stroke();
+            }
+
+            function drawCone(r, h) {
+                clearCanvas();
+                const scale = Math.min(55 / r, 80 / h);
+                const sr = r * scale;
+                const sh = h * scale;
+                const baseY = cy + sh * 0.4;
+                const apexY = baseY - sh;
+                const tcx = cx;
+                const ellipseRx = sr;
+                const ellipseRy = sr * 0.35;
+
+                // Body
+                ctx.beginPath();
+                ctx.moveTo(tcx - ellipseRx, baseY);
+                ctx.ellipse(tcx, baseY, ellipseRx, ellipseRy, 0, Math.PI, 0, true);
+                ctx.lineTo(tcx, apexY);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(253,203,110,0.45)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 1.8;
+                ctx.stroke();
+
+                // Full base ellipse (dashed hidden part)
+                ctx.beginPath();
+                ctx.ellipse(tcx, baseY, ellipseRx, ellipseRy, 0, Math.PI, Math.PI * 2);
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Visible base arc
+                ctx.beginPath();
+                ctx.ellipse(tcx, baseY, ellipseRx, ellipseRy, 0, 0, Math.PI);
+                ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                ctx.lineWidth = 1.8;
+                ctx.stroke();
+
+                // Apex dot
+                ctx.beginPath();
+                ctx.arc(tcx, apexY, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+
+                // Labels
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`r = ${formatNum(r)}`, tcx, baseY + ellipseRy + 16);
+                ctx.fillText(`h = ${formatNum(h)}`, tcx + ellipseRx + 16, (apexY + baseY) / 2);
+                // h arrow
+                ctx.beginPath();
+                ctx.moveTo(tcx + ellipseRx + 5, apexY);
+                ctx.lineTo(tcx + ellipseRx + 5, baseY);
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            function drawSphere(r) {
+                clearCanvas();
+                const scale = Math.min(100 / r, 60);
+                const sr = r * scale;
+                const scx = cx;
+                const scy = cy;
+
+                // Main circle
+                const grad = ctx.createRadialGradient(scx - sr * 0.3, scy - sr * 0.35, sr * 0.1, scx, scy,
+                sr);
+                grad.addColorStop(0, 'rgba(200,195,255,0.85)');
+                grad.addColorStop(0.6, 'rgba(162,155,254,0.55)');
+                grad.addColorStop(1, 'rgba(100,85,220,0.35)');
+                ctx.beginPath();
+                ctx.arc(scx, scy, sr, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Latitude lines
+                for (let lat = -0.4; lat <= 0.4; lat += 0.4) {
+                    const yOff = lat * sr;
+                    const rx = sr * Math.sqrt(1 - lat * lat);
+                    const ry = rx * 0.3;
+                    ctx.beginPath();
+                    ctx.ellipse(scx, scy + yOff, rx, Math.abs(ry), 0, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([3, 5]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                // Longitude line
+                ctx.beginPath();
+                ctx.ellipse(scx, scy, sr * 0.2, sr, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Label
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 13px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`r = ${formatNum(r)}`, scx, scy - sr - 10);
+                // radius line
+                ctx.beginPath();
+                ctx.moveTo(scx, scy);
+                ctx.lineTo(scx + sr * 0.7, scy - sr * 0.7);
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(scx + sr * 0.7, scy - sr * 0.7, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+            }
+
+            function drawHemisphere(r) {
+                clearCanvas();
+                const scale = Math.min(100 / r, 55);
+                const sr = r * scale;
+                const scx = cx;
+                const baseY = cy + sr * 0.15;
+
+                // Base ellipse
+                const ellipseRx = sr;
+                const ellipseRy = sr * 0.3;
+
+                // Dome
+                ctx.beginPath();
+                ctx.ellipse(scx, baseY, ellipseRx, ellipseRy, 0, Math.PI, 0, true);
+                ctx.arc(scx, baseY, sr, Math.PI, 0, false);
+                ctx.closePath();
+                const grad = ctx.createRadialGradient(scx - sr * 0.2, baseY - sr * 0.5, sr * 0.05, scx,
+                    baseY - sr * 0.1, sr);
+                grad.addColorStop(0, 'rgba(255,179,204,0.8)');
+                grad.addColorStop(1, 'rgba(253,121,168,0.4)');
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Base fill
+                ctx.beginPath();
+                ctx.ellipse(scx, baseY, ellipseRx, ellipseRy, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(224,85,128,0.35)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Latitude line on dome
+                ctx.beginPath();
+                ctx.ellipse(scx, baseY - sr * 0.5, sr * 0.87, sr * 0.22, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Label
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 13px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`r = ${formatNum(r)}`, scx, baseY - sr - 10);
+            }
+
+            function drawSquarePyramid(a, h) {
+                clearCanvas();
+                const scale = Math.min(70 / a, 90 / h);
+                const sa = a * scale;
+                const sh = h * scale;
+                const ox = cx - sa * 0.7;
+                const oy = cy + sa * 0.3;
+                const dx = sa * 0.9;
+                const dy = sa * 0.45;
+                const apexX = ox + dx * 0.5;
+                const apexY = oy - dy * 0.4 - sh;
+
+                // Base corners
+                const bl = [ox, oy]; // bottom-left
+                const br = [ox + dx, oy - dy * 0.3]; // bottom-right
+                const tr = [ox + dx + sa * 0.3, oy - dy * 0.3 - dy * 0.7]; // top-right
+                const tl = [ox + sa * 0.3, oy - dy * 0.7]; // top-left
+
+                // Faces
+                const frontFace = [bl, br, [apexX, apexY]];
+                const rightFace = [br, tr, [apexX, apexY]];
+                const backFace = [tr, tl, [apexX, apexY]];
+                const leftFace = [tl, bl, [apexX, apexY]];
+
+                drawFace(frontFace, 'rgba(255,234,167,0.55)', 'rgba(255,255,255,0.7)', 1.6);
+                drawFace(rightFace, 'rgba(212,184,74,0.45)', 'rgba(255,255,255,0.6)', 1.6);
+                drawFace(backFace, 'rgba(200,170,60,0.3)', 'rgba(255,255,255,0.4)', 1.3);
+                drawFace(leftFace, 'rgba(240,215,130,0.4)', 'rgba(255,255,255,0.55)', 1.6);
+
+                // Base (dashed hidden edges)
+                ctx.beginPath();
+                ctx.moveTo(bl[0], bl[1]);
+                ctx.lineTo(br[0], br[1]);
+                ctx.lineTo(tr[0], tr[1]);
+                ctx.lineTo(tl[0], tl[1]);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(180,150,80,0.25)';
+                ctx.fill();
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 1.2;
+                ctx.stroke();
+                ctx.setLineDash([]);
+                // Solid visible base edge
+                ctx.beginPath();
+                ctx.moveTo(bl[0], bl[1]);
+                ctx.lineTo(br[0], br[1]);
+                ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                ctx.lineWidth = 1.6;
+                ctx.setLineDash([]);
+                ctx.stroke();
+
+                // Apex dot
+                ctx.beginPath();
+                ctx.arc(apexX, apexY, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+
+                // Labels
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`a = ${formatNum(a)}`, ox + dx * 0.5, oy + 18);
+                ctx.fillText(`h = ${formatNum(h)}`, apexX + sa * 0.5 + 10, (apexY + oy) / 2);
+            }
+
+            function drawTriangularPrism(a, h) {
+                clearCanvas();
+                const scale = Math.min(60 / a, 70 / h);
+                const sa = a * scale;
+                const sh = h * scale;
+                const triH = sa * Math.sqrt(3) / 2; // height of equilateral triangle
+                const ox = cx - sa * 0.5;
+                const oy = cy + triH * 0.3;
+                const depthX = sh * 0.7;
+                const depthY = sh * 0.35;
+
+                // Front triangle
+                const ftop = [ox + sa / 2, oy - triH];
+                const fleft = [ox, oy];
+                const fright = [ox + sa, oy];
+                // Back triangle
+                const btop = [ftop[0] + depthX, ftop[1] - depthY];
+                const bleft = [fleft[0] + depthX, fleft[1] - depthY];
+                const bright = [fright[0] + depthX, fright[1] - depthY];
+
+                // Front triangle face
+                drawFace([fleft, fright, ftop], 'rgba(129,236,236,0.55)', 'rgba(255,255,255,0.7)', 1.8);
+                // Top rectangular face
+                drawFace([ftop, btop, bright, fright], 'rgba(181,247,247,0.5)', 'rgba(255,255,255,0.6)',
+                1.5);
+                // Right rectangular face
+                drawFace([fright, bright, bleft, fleft], 'rgba(78,207,207,0.4)', 'rgba(255,255,255,0.55)',
+                1.5);
+                // Back triangle (dashed)
+                ctx.beginPath();
+                ctx.moveTo(bleft[0], bleft[1]);
+                ctx.lineTo(bright[0], bright[1]);
+                ctx.lineTo(btop[0], btop[1]);
+                ctx.closePath();
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+                ctx.lineWidth = 1.3;
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Labels
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px "Segoe UI", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`a = ${formatNum(a)}`, ox + sa / 2, oy + 16);
+                ctx.fillText(`h = ${formatNum(h)}`, ox + sa + depthX + 12, oy - triH * 0.5);
+            }
+
+            // ─────────────────────────────────────
+            // UI UPDATE
+            // ─────────────────────────────────────
+            function renderProblem(problem) {
+                shapeLabel.textContent = problem.shape.name;
+                problemBadge.textContent = getProblemTypeLabel(problem.problemType);
+                problemBadge.className = 'problem-type-badge ' + getBadgeClass(problem.problemType);
+                problemText.innerHTML = buildProblemText(problem.shape, problem.dims, problem.problemType);
+
+                // Dimension tags
+                dimsList.innerHTML = '';
+                for (const [key, val] of Object.entries(problem.dims)) {
+                    const tag = document.createElement('span');
+                    tag.className = 'dim-tag';
+                    tag.innerHTML = `<strong>${key}</strong> = ${formatNum(val)}`;
+                    dimsList.appendChild(tag);
+                }
+
+                // Draw shape
+                problem.shape.draw(problem.dims);
+
+                // Reset input
+                answerInput.value = '';
+                answerInput.focus();
+                feedbackDiv.className = 'feedback';
+                feedbackDiv.textContent = '';
+                feedbackDiv.style.display = 'none';
+                mainCard.classList.remove('correct-flash', 'incorrect-flash');
+                answered = false;
+                hintUsed = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✓ Check';
+            }
+
+            function updateStats() {
+                scoreVal.textContent = score;
+                streakVal.textContent = streak;
+                totalVal.textContent = `${totalCorrect}/${totalAttempts}`;
+            }
+
+            function showFeedback(correct, problem) {
+                feedbackDiv.style.display = 'block';
+                feedbackDiv.className = 'feedback show ' + (correct ? 'correct' : 'incorrect');
+                const typeLabel = getProblemTypeLabel(problem.problemType);
+                const formulaDesc = problem.shape.formulaDesc[problem.problemType] || '';
+                if (correct) {
+                    feedbackDiv.innerHTML = `
+                        ✅ <strong>Correct!</strong> The answer is <strong>${problem.correctAnswer.toFixed(2)}</strong> ${getUnitSuffix(problem.problemType).trim()}.
+                        <div class="formula-reveal">📝 ${formulaDesc}</div>
+                    `;
+                    mainCard.classList.add('correct-flash');
+                    setTimeout(() => mainCard.classList.remove('correct-flash'), 600);
+                    spawnConfetti();
+                } else {
+                    feedbackDiv.innerHTML = `
+                        ❌ <strong>Not quite.</strong> The correct answer is <strong>${problem.correctAnswer.toFixed(2)}</strong> ${getUnitSuffix(problem.problemType).trim()}.
+                        <div class="formula-reveal">📝 ${formulaDesc}</div>
+                    `;
+                    mainCard.classList.add('incorrect-flash');
+                    setTimeout(() => mainCard.classList.remove('incorrect-flash'), 600);
+                }
+                submitBtn.disabled = true;
+                submitBtn.textContent = '✓ Checked';
+            }
+
+            function spawnConfetti() {
+                const colors = ['#6c5ce7', '#00cec9', '#fdcb6e', '#fd79a8', '#55efc4', '#74b9ff',
+                    '#ffeaa7', '#a29bfe'
+                ];
+                const count = 50;
+                const fragment = document.createDocumentFragment();
+                for (let i = 0; i < count; i++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'confetti-piece';
+                    piece.style.left = Math.random() * 100 + '%';
+                    piece.style.top = -(Math.random() * 80 + 20) + 'px';
+                    piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    piece.style.animationDuration = (Math.random() * 1 + 0.8) + 's';
+                    piece.style.animationDelay = Math.random() * 0.3 + 's';
+                    piece.style.width = (Math.random() * 8 + 5) + 'px';
+                    piece.style.height = (Math.random() * 8 + 5) + 'px';
+                    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                    fragment.appendChild(piece);
+                }
+                confettiContainer.appendChild(fragment);
+                setTimeout(() => {
+                    confettiContainer.innerHTML = '';
+                }, 1800);
+            }
+
+            // ─────────────────────────────────────
+            // EVENT HANDLERS
+            // ─────────────────────────────────────
+            function handleSubmit() {
+                if (answered || !currentProblem) return;
+                const userInput = answerInput.value.trim();
+                if (userInput === '') return;
+
+                const userNum = parseFloat(userInput);
+                if (isNaN(userNum)) {
+                    feedbackDiv.style.display = 'block';
+                    feedbackDiv.className = 'feedback show incorrect';
+                    feedbackDiv.innerHTML = '⚠️ Please enter a valid number.';
+                    return;
+                }
+
+                totalAttempts++;
+                const tolerance = 0.05;
+                const correct = Math.abs(userNum - currentProblem.correctAnswer) <= tolerance;
+
+                if (correct) {
+                    totalCorrect++;
+                    const bonus = hintUsed ? 1 : 2;
+                    score += bonus;
+                    streak++;
+                } else {
+                    streak = 0;
+                    score = Math.max(0, score - 1);
+                }
+
+                answered = true;
+                updateStats();
+                showFeedback(correct, currentProblem);
+            }
+
+            function handleNewProblem() {
+                currentProblem = generateProblem();
+                renderProblem(currentProblem);
+                updateStats();
+            }
+
+            function handleHint() {
+                if (answered || !currentProblem) return;
+                hintUsed = true;
+                const formulaDesc = currentProblem.shape.formulaDesc[currentProblem.problemType] || '';
+                feedbackDiv.style.display = 'block';
+                feedbackDiv.className = 'feedback show';
+                feedbackDiv.style.background = 'rgba(253,203,110,0.1)';
+                feedbackDiv.style.color = '#fdcb6e';
+                feedbackDiv.style.border = '1px solid rgba(253,203,110,0.25)';
+                feedbackDiv.innerHTML = `💡 <strong>Hint:</strong> ${formulaDesc}`;
+                setTimeout(() => {
+                    if (!answered && feedbackDiv.style.color === '#fdcb6e') {
+                        feedbackDiv.style.display = 'none';
+                        feedbackDiv.className = 'feedback';
+                    }
+                }, 3500);
+            }
+
+            function buildFormulaSheet() {
+                let html = '';
+                for (const [key, shape] of Object.entries(shapeDefs)) {
+                    html += `<span class="shape-name">${shape.icon} ${shape.name}</span>`;
+                    for (const [pt, formula] of Object.entries(shape.formulas)) {
+                        const label = getProblemTypeLabel(pt);
+                        html += `${label}: <strong>${formula}</strong><br>`;
+                    }
+                    html += '<br>';
+                }
+                formulaSheet.innerHTML = html;
+            }
+
+            // ─────────────────────────────────────
+            // INITIALIZATION
+            // ─────────────────────────────────────
+            function init() {
+                buildFormulaSheet();
+
+                // Difficulty buttons
+                diffBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        diffBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        difficulty = btn.dataset.diff;
+                        handleNewProblem();
+                    });
+                });
+
+                // Submit
+                submitBtn.addEventListener('click', handleSubmit);
+                answerInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') handleSubmit();
+                });
+
+                // New problem
+                newBtn.addEventListener('click', handleNewProblem);
+
+                // Hint
+                hintBtn.addEventListener('click', handleHint);
+
+                // Toggle formulas
+                toggleFormulasBtn.addEventListener('click', () => {
+                    formulaSheet.classList.toggle('open');
+                    toggleFormulasBtn.textContent = formulaSheet.classList.contains('open') ?
+                        '📋 Hide Formulas' : '📋 Formulas';
+                });
+
+                // Generate first problem
+                handleNewProblem();
+                updateStats();
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
