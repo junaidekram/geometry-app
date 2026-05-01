@@ -272,7 +272,7 @@
                         <button class="sym-btn" data-sym="&#178;" title="Squared">&#178;</button>
                         <button class="sym-btn" data-sym="&#179;" title="Cubed">&#179;</button>
                         <button class="sym-btn" data-sym="/" title="Fraction">/</button>
-                        <span class="sym-hint">Supports: sqrt(), pi, fractions like 3/4</span>
+                        <span class="sym-hint">Supports: sqrt(), pi, sin/cos/tan(°), fractions like 3/4</span>
                     </div>
                 </div>
                 <div class="feedback" id="feedback"></div>
@@ -328,6 +328,8 @@
             a: 'side', l: 'length', b: 'breadth', h: 'height',
             r: 'radius', R: 'base radius', d: 'diameter',
             D: 'base diameter', s: 'slant height',
+            T: 'angle \u03b8 (\u00b0)', p: 'leg a', q: 'leg b',
+            a1: 'top side', a2: 'bottom side', ht: 'trap. height',
         };
 
         /* Helpers */
@@ -341,7 +343,7 @@
             return r ? [parseInt(r[1],16), parseInt(r[2],16), parseInt(r[3],16)] : [128,128,128];
         }
 
-        /* Expression parser: sqrt(), pi, pi symbol, fractions, ^ */
+        /* Expression parser: sqrt(), pi, sin/cos/tan(degrees), fractions, ^ */
         function parseExpression(str) {
             var expr = str.trim();
             if (!expr) return NaN;
@@ -350,17 +352,95 @@
             expr = expr.replace(/\bsqrt\s*\(([^)]*)\)/gi, 'Math.sqrt($1)');
             expr = expr.replace(/\u03c0/g, 'Math.PI');
             expr = expr.replace(/\bpi\b/gi, 'Math.PI');
+            /* Trig in degrees — convert before ^ expansion */
+            expr = expr.replace(/\bsin\s*\(([^)]*)\)/gi, function(m,a){ return 'Math.sin(('+a+')*Math.PI/180)'; });
+            expr = expr.replace(/\bcos\s*\(([^)]*)\)/gi, function(m,a){ return 'Math.cos(('+a+')*Math.PI/180)'; });
+            expr = expr.replace(/\btan\s*\(([^)]*)\)/gi, function(m,a){ return 'Math.tan(('+a+')*Math.PI/180)'; });
             expr = expr.replace(/\^/g, '**');
             expr = expr.replace(/\u00b2/g, '**2');
             expr = expr.replace(/\u00b3/g, '**3');
-            // Safety: remove known Math tokens and ** operator, then allow only digits/arithmetic
-            var cleaned = expr.replace(/\bMath\.(sqrt|PI|abs|pow)\b/g, '').replace(/\*\*/g, '');
+            // Safety: allow only digits/arithmetic after removing known Math tokens
+            var cleaned = expr.replace(/\bMath\.(sqrt|PI|abs|pow|sin|cos|tan)\b/g, '').replace(/\*\*/g, '');
             if (/[^0-9+\-*/.()\s]/.test(cleaned)) return NaN;
             try {
                 var result = new Function('"use strict"; return (' + expr + ')')();
                 if (typeof result === 'number' && isFinite(result)) return result;
             } catch (e) { /* ignore */ }
             return NaN;
+        }
+
+        /* ================================================================
+           POLYGON / FACTORY HELPERS
+        ================================================================ */
+        function regPolyArea(n, a)    { return (n * a * a) / (4 * Math.tan(Math.PI / n)); }
+        function regPolyApothem(n, a) { return a / (2 * Math.tan(Math.PI / n)); }
+
+        function makeRegPrism(n, name, icon, color) {
+            return {
+                name: name, icon: icon, color: color,
+                dimNames: { a: 'base side', h: 'height' },
+                applicable: ['LSA', 'TSA', 'Volume'],
+                formulas: {
+                    LSA:    String(n) + 'ah',
+                    TSA:    String(n) + 'ah + 2A_base',
+                    Volume: 'A_base \u00d7 h',
+                },
+                formulaDesc: {
+                    LSA:    'LSA = ' + n + '\u00b7a\u00b7h  (' + n + ' rectangular faces)',
+                    TSA:    'TSA = ' + n + '\u00b7a\u00b7h + 2A_base,  A_base = ' + n + 'a\u00b2 / [4 tan(\u03c0/' + n + ')]',
+                    Volume: 'V = A_base \u00d7 h,  A_base = ' + n + 'a\u00b2 / [4 tan(\u03c0/' + n + ')]',
+                },
+                getDimensions: function(diff) {
+                    var ranges = {easy:[2,5],medium:[2,7],hard:[2,10]};
+                    var mn=ranges[diff][0], mx=ranges[diff][1];
+                    var a=randInt(mn,mx), h=randInt(mn+1,mx+4);
+                    if (diff==='hard' && Math.random()<0.35) a+=randDec();
+                    if (diff==='hard' && Math.random()<0.35) h+=randDec();
+                    return { a:roundTo(a,1), h:roundTo(h,1) };
+                },
+                compute: function(dims, type) {
+                    var a=dims.a, h=dims.h, A=regPolyArea(n,a);
+                    if (type==='LSA')    return n*a*h;
+                    if (type==='TSA')    return 2*A+n*a*h;
+                    if (type==='Volume') return A*h;
+                },
+                draw: function(dims) { drawRegularPrism(n, dims.a, dims.h, color); },
+            };
+        }
+
+        function makeRegPyramid(n, name, icon, color) {
+            return {
+                name: name, icon: icon, color: color, pyramidN: n,
+                dimNames: { a: 'base side', h: 'height' },
+                applicable: ['LSA', 'TSA', 'Volume'],
+                formulas: {
+                    LSA:    '(\u00bd)' + n + 'al',
+                    TSA:    '(\u00bd)' + n + 'al + A_base',
+                    Volume: '(\u2153)A_base\u00b7h',
+                },
+                formulaDesc: {
+                    LSA:    'LSA = (' + n + '\u00b7a\u00b7l)/2,  l = \u221a(h\u00b2 + apo\u00b2),  apo = a / [2 tan(\u03c0/' + n + ')]',
+                    TSA:    'TSA = LSA + A_base,  A_base = ' + n + 'a\u00b2 / [4 tan(\u03c0/' + n + ')]',
+                    Volume: 'V = (1/3)\u00b7A_base\u00b7h',
+                },
+                getDimensions: function(diff) {
+                    var ranges = {easy:[2,6],medium:[3,9],hard:[2,12]};
+                    var mn=ranges[diff][0], mx=ranges[diff][1];
+                    var a=randInt(mn,mx), h=randInt(mn+1,mx+5);
+                    if (diff==='hard' && Math.random()<0.35) a+=randDec();
+                    if (diff==='hard' && Math.random()<0.35) h+=randDec();
+                    return { a:roundTo(a,1), h:roundTo(h,1) };
+                },
+                compute: function(dims, type) {
+                    var a=dims.a, h=dims.h;
+                    var A=regPolyArea(n,a), apo=regPolyApothem(n,a);
+                    var l=Math.sqrt(h*h+apo*apo);
+                    if (type==='LSA')    return (n*a*l)/2;
+                    if (type==='TSA')    return (n*a*l)/2+A;
+                    if (type==='Volume') return (1/3)*A*h;
+                },
+                draw: function(dims, dd) { drawRegularPyramid(n, dims.a, dims.h, color, dd); },
+            };
         }
 
         /* ================================================================
@@ -661,6 +741,118 @@
                 },
                 draw: function(dims, dd) { drawFrustum(dims.R, dims.r, dims.h, dd||dims); },
             },
+
+            /* ---- New prisms: 7, 9, 10 sides ---- */
+            heptagonalPrism:  makeRegPrism(7,  'Heptagonal Prism',  '\u2B22', '#fd79a8'),
+            nonagonalPrism:   makeRegPrism(9,  'Nonagonal Prism',   '\u2B22', '#6c5ce7'),
+            decagonalPrism:   makeRegPrism(10, 'Decagonal Prism',   '\u2B22', '#00b894'),
+
+            /* ---- Trapezoid prism ---- */
+            trapezoidPrism: {
+                name: 'Trapezoidal Prism', icon: '\u2B22', color: '#fd79a8',
+                dimNames: { a1: 'top side', a2: 'bottom side', ht: 'trap. height', h: 'length' },
+                applicable: ['LSA','TSA','Volume'],
+                formulas: {
+                    LSA:    'Perimeter \u00d7 h',
+                    TSA:    'Perimeter \u00d7 h + (a1+a2)\u00b7ht',
+                    Volume: '\u00bd(a1+a2)\u00b7ht\u00b7h',
+                },
+                formulaDesc: {
+                    LSA:    'LSA = P \u00d7 h,  P = a1 + a2 + 2 leg,  leg = \u221a(ht\u00b2 + ((a2\u2212a1)/2)\u00b2)',
+                    TSA:    'TSA = LSA + 2 \u00d7 trap area,  trap area = \u00bd(a1+a2)\u00b7ht',
+                    Volume: 'V = \u00bd(a1+a2)\u00b7ht\u00b7h',
+                },
+                getDimensions: function(diff) {
+                    var ranges={easy:[2,6],medium:[3,9],hard:[2,12]};
+                    var mn=ranges[diff][0], mx=ranges[diff][1];
+                    var a2=randInt(mn+2,mx), a1=randInt(mn,a2-1), ht=randInt(mn+1,mx), h=randInt(mn+2,mx+4);
+                    return { a1:roundTo(a1,1), a2:roundTo(a2,1), ht:roundTo(ht,1), h:roundTo(h,1) };
+                },
+                compute: function(dims, type) {
+                    var a1=dims.a1, a2=dims.a2, ht=dims.ht, h=dims.h;
+                    var leg=Math.sqrt(ht*ht+((a2-a1)/2)*((a2-a1)/2));
+                    var perim=a1+a2+2*leg, trapArea=0.5*(a1+a2)*ht;
+                    if (type==='LSA')    return perim*h;
+                    if (type==='TSA')    return perim*h+2*trapArea;
+                    if (type==='Volume') return trapArea*h;
+                },
+                draw: function(dims) { drawTrapezoidPrism(dims.a1, dims.a2, dims.ht, dims.h); },
+            },
+
+            /* ---- Right-triangle prism ---- */
+            rightTrianglePrism: {
+                name: 'Right-Triangle Prism', icon: '\uD83D\uDCD0', color: '#74b9ff',
+                dimNames: { p: 'leg a', q: 'leg b', h: 'length' },
+                applicable: ['LSA','TSA','Volume'],
+                formulas: {
+                    LSA:    '(p+q+hyp)\u00b7h',
+                    TSA:    '(p+q+hyp)\u00b7h + pq',
+                    Volume: '\u00bdpqh',
+                },
+                formulaDesc: {
+                    LSA:    'LSA = (p + q + hyp)\u00b7h,  hyp = \u221a(p\u00b2+q\u00b2)',
+                    TSA:    'TSA = LSA + pq  (two right-triangle faces)',
+                    Volume: 'V = \u00bd\u00b7p\u00b7q\u00b7h',
+                },
+                getDimensions: function(diff) {
+                    var ranges={easy:[2,7],medium:[3,11],hard:[2,14]};
+                    var mn=ranges[diff][0], mx=ranges[diff][1];
+                    var p=randInt(mn,mx), q=randInt(mn,mx), h=randInt(mn+2,mx+5);
+                    if (diff==='hard'&&Math.random()<0.35) p+=randDec();
+                    if (diff==='hard'&&Math.random()<0.35) q+=randDec();
+                    return { p:roundTo(p,1), q:roundTo(q,1), h:roundTo(h,1) };
+                },
+                compute: function(dims, type) {
+                    var p=dims.p, q=dims.q, h=dims.h, hyp=Math.sqrt(p*p+q*q);
+                    if (type==='LSA')    return (p+q+hyp)*h;
+                    if (type==='TSA')    return (p+q+hyp)*h+p*q;
+                    if (type==='Volume') return 0.5*p*q*h;
+                },
+                draw: function(dims) { drawRightTrianglePrism(dims.p, dims.q, dims.h); },
+            },
+
+            /* ---- Rectangular pyramid ---- */
+            rectangularPyramid: {
+                name: 'Rectangular Pyramid', icon: '\uD83D\uDD3B', color: '#fab1a0',
+                dimNames: { l: 'base length', b: 'base breadth', h: 'height' },
+                applicable: ['LSA','TSA','Volume'],
+                formulas: {
+                    LSA:    'l\u00b7s_b + b\u00b7s_l',
+                    TSA:    'lb + l\u00b7s_b + b\u00b7s_l',
+                    Volume: '(1/3)lbh',
+                },
+                formulaDesc: {
+                    LSA:    'LSA = l\u00b7s_b + b\u00b7s_l,  s_b=\u221a(h\u00b2+(b/2)\u00b2),  s_l=\u221a(h\u00b2+(l/2)\u00b2)',
+                    TSA:    'TSA = lb + l\u00b7s_b + b\u00b7s_l',
+                    Volume: 'V = (1/3)\u00b7l\u00b7b\u00b7h',
+                },
+                getDimensions: function(diff) {
+                    var ranges={easy:[2,7],medium:[3,11],hard:[2,14]};
+                    var mn=ranges[diff][0], mx=ranges[diff][1];
+                    var l=randInt(mn,mx), b=randInt(mn,mx), h=randInt(mn+1,mx+4);
+                    if (diff==='hard'&&Math.random()<0.35) l+=randDec();
+                    if (diff==='hard'&&Math.random()<0.35) b+=randDec();
+                    if (l===b) b+=1;
+                    return { l:roundTo(l,1), b:roundTo(b,1), h:roundTo(h,1) };
+                },
+                compute: function(dims, type) {
+                    var l=dims.l, b=dims.b, h=dims.h;
+                    var sl=Math.sqrt(h*h+(b/2)*(b/2)), sb=Math.sqrt(h*h+(l/2)*(l/2));
+                    if (type==='LSA')    return l*sl+b*sb;
+                    if (type==='TSA')    return l*b+l*sl+b*sb;
+                    if (type==='Volume') return (1/3)*l*b*h;
+                },
+                draw: function(dims, dd) { drawRectPyramid(dims.l, dims.b, dims.h, dd); },
+            },
+
+            /* ---- Regular polygon pyramids: 3 through 10 ---- */
+            triangularPyramid:  makeRegPyramid(3,  'Triangular Pyramid',  '\uD83D\uDD3B', '#fdcb6e'),
+            pentagonalPyramid:  makeRegPyramid(5,  'Pentagonal Pyramid',  '\uD83D\uDD3B', '#00cec9'),
+            hexagonalPyramid:   makeRegPyramid(6,  'Hexagonal Pyramid',   '\uD83D\uDD3B', '#6c5ce7'),
+            heptagonalPyramid:  makeRegPyramid(7,  'Heptagonal Pyramid',  '\uD83D\uDD3B', '#e17055'),
+            octagonalPyramid:   makeRegPyramid(8,  'Octagonal Pyramid',   '\uD83D\uDD3B', '#0984e3'),
+            nonagonalPyramid:   makeRegPyramid(9,  'Nonagonal Pyramid',   '\uD83D\uDD3B', '#a29bfe'),
+            decagonalPyramid:   makeRegPyramid(10, 'Decagonal Pyramid',   '\uD83D\uDD3B', '#55efc4'),
         };
 
         /* ================================================================
@@ -668,13 +860,14 @@
         ================================================================ */
         function applyDisplayVariant(shapeKey, dims, problemType, diff) {
             var displayDims = Object.assign({}, dims);
-            var challengeMsg = null, challengeSub = null;
+            var shape = shapeDefs[shapeKey];
 
             if (diff === 'easy') return { displayDims: displayDims, challengeMsg: null, challengeSub: null };
 
             var roll = Math.random();
             var diamProb  = diff === 'hard' ? 0.55 : 0.35;
             var slantProb = diff === 'hard' ? 0.50 : 0.22;
+            var trigProb  = diff === 'hard' ? 0.45 : 0.28;
 
             /* Diameter instead of radius */
             var radiusShapes = ['cylinder','cone','sphere','hemisphere'];
@@ -721,6 +914,17 @@
                 };
             }
 
+            /* Cone: semi-vertical angle instead of height (hard only) */
+            if (shapeKey === 'cone' && diff === 'hard' && roll >= diamProb + slantProb && roll < diamProb + slantProb + 0.30) {
+                var rcone = dims.r, hcone = dims.h;
+                var alpha = roundTo(Math.atan2(rcone, hcone) * 180 / Math.PI, 1);
+                return {
+                    displayDims: { r: rcone, T: alpha },
+                    challengeMsg: '\uD83D\uDCD0 Semi-vertical angle \u03b8 is given \u2014 find height first!',
+                    challengeSub: 'h = r / tan(\u03b8\u00b0)  \u2014 you may type tan(\u03b8) directly in your answer',
+                };
+            }
+
             /* Square Pyramid: slant height instead of vertical height */
             if (shapeKey === 'squarePyramid' && roll >= diamProb && roll < diamProb + slantProb) {
                 var ap = dims.a, hp = dims.h;
@@ -737,6 +941,29 @@
                 };
             }
 
+            /* Square Pyramid: slant angle instead of height (hard) */
+            if (shapeKey === 'squarePyramid' && diff === 'hard' && roll >= diamProb + slantProb && roll < diamProb + slantProb + 0.35) {
+                var asp = dims.a, hsp = dims.h, apoSp = asp / 2;
+                var tsp = roundTo(Math.atan2(hsp, apoSp) * 180 / Math.PI, 1);
+                return {
+                    displayDims: { a: asp, T: tsp },
+                    challengeMsg: '\uD83D\uDCCF Slant angle \u03b8 from base to lateral face is given \u2014 find height!',
+                    challengeSub: 'h = (a/2) \u00d7 tan(\u03b8\u00b0)  \u2014 you may type tan(\u03b8) in your answer',
+                };
+            }
+
+            /* Regular n-gon pyramid: slant angle instead of height (medium/hard) */
+            if (shape && shape.pyramidN && roll >= diamProb && roll < diamProb + trigProb) {
+                var n = shape.pyramidN;
+                var apo = regPolyApothem(n, dims.a);
+                var T = roundTo(Math.atan2(dims.h, apo) * 180 / Math.PI, 1);
+                return {
+                    displayDims: { a: dims.a, T: T },
+                    challengeMsg: '\uD83D\uDCCF Slant angle \u03b8 (base to lateral face) is given \u2014 derive height!',
+                    challengeSub: 'apothem = a / [2\u00b7tan(\u03c0/' + n + ')],  h = apothem \u00d7 tan(\u03b8\u00b0)',
+                };
+            }
+
             return { displayDims: displayDims, challengeMsg: null, challengeSub: null };
         }
 
@@ -749,12 +976,15 @@
             var shape = shapeDefs[shapeKey];
             var problemType = shape.applicable[Math.floor(Math.random() * shape.applicable.length)];
             var dims = shape.getDimensions(difficulty);
-            var correctAnswer = roundTo(shape.compute(dims, problemType), 2);
+            var rawAnswer = shape.compute(dims, problemType);
+            /* Rounding precision: easy=2dp, medium=2dp, hard=2 or 3dp */
+            var rdp = (difficulty === 'hard' && Math.random() < 0.4) ? 3 : 2;
+            var correctAnswer = roundTo(rawAnswer, rdp);
             var variant = applyDisplayVariant(shapeKey, dims, problemType, difficulty);
             return {
                 shapeKey: shapeKey, shape: shape, problemType: problemType,
                 dims: dims, displayDims: variant.displayDims,
-                correctAnswer: correctAnswer,
+                correctAnswer: correctAnswer, roundDecimal: rdp,
                 challengeMsg: variant.challengeMsg, challengeSub: variant.challengeSub,
             };
         }
@@ -769,16 +999,20 @@
         }
         function getUnitSuffix(pt) { return pt==='Volume' ? 'cubic units' : 'square units'; }
 
-        function buildProblemText(shape, displayDims, problemType) {
+        function buildProblemText(shape, displayDims, problemType, rdp) {
             var typeLabel = getProblemTypeLabel(problemType);
             var unitSuffix = getUnitSuffix(problemType);
             var entries = Object.keys(displayDims);
             var dimStr = entries.map(function(k) {
                 var full = DIM_LABELS[k] || k;
-                return k + ' (' + full + ') = <span class="dim">' + formatNum(displayDims[k]) + '</span>';
+                var dispKey = (k === 'T') ? '\u03b8' : k;
+                var valStr = formatNum(displayDims[k]) + (k === 'T' ? '\u00b0' : '');
+                return dispKey + ' (' + full + ') = <span class="dim">' + valStr + '</span>';
             }).join(', ');
-            return 'Find the <strong>' + typeLabel + '</strong> of a <strong>' + shape.name + '</strong> where '
-                + dimStr + '. <em>(Answer in ' + unitSuffix + ')</em>';
+            var plStr = rdp === 1 ? '1 decimal place' : rdp + ' decimal places';
+            var roundNote = '  <em>Round to <strong>' + plStr + '</strong>.</em>';
+            return 'Find the <strong>' + typeLabel + '</strong> of a <strong>' + shape.name +
+                '</strong> where ' + dimStr + '.' + roundNote + ' <em>(in ' + unitSuffix + ')</em>';
         }
 
         /* ================================================================
@@ -999,18 +1233,121 @@
             ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1; ctx.stroke();
         }
 
-        /* ================================================================
-           UI
-        ================================================================ */
+        /* ---- drawRegularPyramid: general regular n-gon pyramid ---- */
+        function drawRegularPyramid(n, a, h, color, ld) {
+            clearCanvas();
+            var Rc = a / (2 * Math.sin(Math.PI / n));
+            var scale = Math.min(110/Rc, 90/h, 2.5);
+            var sR = Rc * scale, sh = h * scale * 0.75;
+            var rot = -Math.PI/2 + (n % 2 === 0 ? Math.PI/n : 0);
+            var pcx = cx - sh * 0.18, pcy = cy + sR * 0.12 + sh * 0.2;
+            var bv = [];
+            for (var i = 0; i < n; i++) {
+                var ang = rot + 2 * Math.PI * i / n;
+                bv.push([pcx + sR * Math.cos(ang), pcy + sR * Math.sin(ang)]);
+            }
+            var apexX = pcx + sh * 0.25, apexY = pcy - sh;
+            var rgb = hexToRgb(color);
+            var cr = rgb[0], cg = rgb[1], cb = rgb[2];
+            /* base (dashed) */
+            ctx.beginPath(); ctx.moveTo(bv[0][0], bv[0][1]);
+            for (var bi = 1; bi < n; bi++) ctx.lineTo(bv[bi][0], bv[bi][1]);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba('+cr+','+cg+','+cb+',0.18)'; ctx.fill();
+            ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1.2; ctx.stroke(); ctx.setLineDash([]);
+            /* lateral faces */
+            for (var si = 0; si < n; si++) {
+                var sj = (si+1) % n;
+                var mx = (bv[si][0]+bv[sj][0])/2 - pcx;
+                if (mx > -sR * 0.1) {
+                    var shade = Math.max(0.2, Math.min(0.55, 0.38+(mx/sR)*0.2));
+                    drawFace([bv[si],bv[sj],[apexX,apexY]],'rgba('+cr+','+cg+','+cb+','+shade+')','rgba(255,255,255,0.5)',1.4);
+                }
+            }
+            ctx.beginPath(); ctx.arc(apexX, apexY, 3, 0, Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+            ctx.fillStyle='#fff'; ctx.font='bold 12px "Segoe UI",sans-serif'; ctx.textAlign='center';
+            ctx.fillText('a (base side) = '+formatNum(a), pcx, pcy + sR + 18);
+            var hLbl = (ld && 'T' in ld) ? '\u03b8 (slant angle) = '+formatNum(ld.T)+'\u00b0' : 'h (height) = '+formatNum(h);
+            ctx.fillText(hLbl, apexX + sR + 18, (apexY + pcy) / 2);
+        }
+
+        /* ---- drawRectPyramid: rectangular base pyramid ---- */
+        function drawRectPyramid(l, b, h, ld) {
+            clearCanvas();
+            var scale = Math.min(90/Math.max(l,b), 110/h, 2.5);
+            var sl=l*scale, sb=b*scale, sh=h*scale;
+            var ox=cx-sl*0.5-sb*0.15, oy=cy+sh*0.2;
+            var dx=sl, dy=sb*0.45;
+            var bl=[ox,oy], br=[ox+dx,oy], tr=[ox+dx+sb*0.3,oy-dy], tl=[ox+sb*0.3,oy-dy];
+            var apexX=(bl[0]+tr[0])/2, apexY=oy-dy*0.5-sh;
+            drawFace([bl,br,[apexX,apexY]],'rgba(250,177,160,0.5)','rgba(255,255,255,0.7)',1.5);
+            drawFace([br,tr,[apexX,apexY]],'rgba(220,140,120,0.45)','rgba(255,255,255,0.65)',1.5);
+            drawFace([tr,tl,[apexX,apexY]],'rgba(200,120,100,0.28)','rgba(255,255,255,0.38)',1.2);
+            drawFace([tl,bl,[apexX,apexY]],'rgba(235,160,140,0.38)','rgba(255,255,255,0.55)',1.5);
+            ctx.beginPath(); ctx.moveTo(bl[0],bl[1]); ctx.lineTo(br[0],br[1]); ctx.lineTo(tr[0],tr[1]); ctx.lineTo(tl[0],tl[1]); ctx.closePath();
+            ctx.fillStyle='rgba(180,100,80,0.15)'; ctx.fill();
+            ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1.2; ctx.stroke(); ctx.setLineDash([]);
+            ctx.beginPath(); ctx.arc(apexX,apexY,3,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+            ctx.fillStyle='#fff'; ctx.font='bold 11px "Segoe UI",sans-serif'; ctx.textAlign='center';
+            ctx.fillText('l='+formatNum(l)+'  b='+formatNum(b), ox+sl/2, oy+18);
+            var hLbl2 = (ld && 'T' in ld) ? '\u03b8='+formatNum(ld.T)+'\u00b0' : 'h='+formatNum(h);
+            ctx.fillText(hLbl2, apexX+sl*0.4+20, (apexY+oy)/2);
+        }
+
+        /* ---- drawTrapezoidPrism: isosceles-trapezoid cross-section ---- */
+        function drawTrapezoidPrism(a1, a2, ht, h) {
+            clearCanvas();
+            var scale = Math.min(80/Math.max(a2,h), 100/ht, 2.5);
+            var sa1=a1*scale, sa2=a2*scale, sht=ht*scale, sh=h*scale*0.7;
+            var off=(sa2-sa1)/2;
+            var ox=cx-sa2*0.4-sh*0.15, oy=cy+sht*0.3;
+            var depthX=sh*0.62, depthY=sh*0.28;
+            var fbl=[ox,oy], fbr=[ox+sa2,oy], ftr=[ox+sa2-off,oy-sht], ftl=[ox+off,oy-sht];
+            var bbl=[fbl[0]+depthX,fbl[1]-depthY], bbr=[fbr[0]+depthX,fbr[1]-depthY];
+            var btr=[ftr[0]+depthX,ftr[1]-depthY], btl=[ftl[0]+depthX,ftl[1]-depthY];
+            ctx.beginPath(); ctx.moveTo(bbl[0],bbl[1]); ctx.lineTo(bbr[0],bbr[1]); ctx.lineTo(btr[0],btr[1]); ctx.lineTo(btl[0],btl[1]); ctx.closePath();
+            ctx.fillStyle='rgba(253,121,168,0.1)'; ctx.fill();
+            ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(255,255,255,0.28)'; ctx.lineWidth=1.1; ctx.stroke(); ctx.setLineDash([]);
+            drawFace([fbl,fbr,bbr,bbl],'rgba(253,121,168,0.4)','rgba(255,255,255,0.55)',1.4);
+            drawFace([fbr,ftr,btr,bbr],'rgba(253,100,150,0.35)','rgba(255,255,255,0.5)',1.3);
+            drawFace([ftr,ftl,btl,btr],'rgba(253,150,180,0.45)','rgba(255,255,255,0.6)',1.4);
+            drawFace([fbl,fbr,ftr,ftl],'rgba(253,121,168,0.55)','rgba(255,255,255,0.75)',1.8);
+            ctx.fillStyle='#fff'; ctx.font='bold 11px "Segoe UI",sans-serif'; ctx.textAlign='center';
+            ctx.fillText('a1='+formatNum(a1)+'  a2='+formatNum(a2)+'  ht='+formatNum(ht), ox+sa2/2, oy+18);
+            ctx.fillText('h (length)='+formatNum(h), ox+sa2+depthX+16, oy-sht*0.5);
+        }
+
+        /* ---- drawRightTrianglePrism: right-angle triangle cross-section ---- */
+        function drawRightTrianglePrism(p, q, h) {
+            clearCanvas();
+            var scale = Math.min(80/Math.max(p,q), 80/h, 2.5);
+            var sp=p*scale, sq=q*scale, sh=h*scale*0.7;
+            var ox=cx-sp*0.4-sh*0.15, oy=cy+sq*0.2;
+            var depthX=sh*0.62, depthY=sh*0.28;
+            var fa=[ox,oy], fb=[ox+sp,oy], fc=[ox,oy-sq];
+            var ba=[fa[0]+depthX,fa[1]-depthY], bb=[fb[0]+depthX,fb[1]-depthY], bc=[fc[0]+depthX,fc[1]-depthY];
+            ctx.beginPath(); ctx.moveTo(ba[0],ba[1]); ctx.lineTo(bb[0],bb[1]); ctx.lineTo(bc[0],bc[1]); ctx.closePath();
+            ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(255,255,255,0.32)'; ctx.lineWidth=1.1; ctx.stroke(); ctx.setLineDash([]);
+            drawFace([fa,fb,bb,ba],'rgba(116,185,255,0.38)','rgba(255,255,255,0.55)',1.4);
+            drawFace([fb,fc,bc,bb],'rgba(100,165,245,0.32)','rgba(255,255,255,0.5)',1.3);
+            drawFace([fa,fb,fc],'rgba(116,185,255,0.55)','rgba(255,255,255,0.75)',1.8);
+            ctx.fillStyle='#fff'; ctx.font='bold 12px "Segoe UI",sans-serif'; ctx.textAlign='center';
+            ctx.fillText('p='+formatNum(p)+'  q='+formatNum(q), ox+sp/2, oy+18);
+            ctx.fillText('h (length)='+formatNum(h), ox+sp+depthX+16, oy-sq*0.5);
+        }
         function renderProblem(problem) {
             shapeLabel.textContent = problem.shape.name;
             problemBadge.textContent = getProblemTypeLabel(problem.problemType);
             problemBadge.className = 'problem-type-badge ' + getBadgeClass(problem.problemType);
-            problemText.innerHTML = buildProblemText(problem.shape, problem.displayDims, problem.problemType);
+            problemText.innerHTML = buildProblemText(problem.shape, problem.displayDims, problem.problemType, problem.roundDecimal);
 
             if (problem.challengeMsg) {
+                var trigNote = ('T' in problem.displayDims)
+                    ? '<div class="derive-hint">\uD83D\uDCA1 You may type <em>sin(°)/cos(°)/tan(°)</em> directly in your answer.</div>'
+                    : '';
                 challengeNote.innerHTML = problem.challengeMsg +
-                    (problem.challengeSub ? '<div class="derive-hint">' + problem.challengeSub + '</div>' : '');
+                    (problem.challengeSub ? '<div class="derive-hint">' + problem.challengeSub + '</div>' : '') +
+                    trigNote;
                 challengeNote.classList.add('show');
             } else {
                 challengeNote.classList.remove('show');
@@ -1023,7 +1360,9 @@
                 var tag = document.createElement('span');
                 tag.className = 'dim-tag';
                 var full = DIM_LABELS[key] || key;
-                tag.innerHTML = '<strong>' + key + '</strong> <span class="dim-name">(' + full + ')</span> = ' + formatNum(val);
+                var dispKey = (key === 'T') ? '\u03b8' : key;
+                var valFmt = formatNum(val) + (key === 'T' ? '\u00b0' : '');
+                tag.innerHTML = '<strong>' + dispKey + '</strong> <span class="dim-name">(' + full + ')</span> = ' + valFmt;
                 dimsList.appendChild(tag);
             });
 
@@ -1046,13 +1385,15 @@
             feedbackDiv.className = 'feedback show '+(correct?'correct':'incorrect');
             var fd = problem.shape.formulaDesc[problem.problemType] || '';
             var unit = getUnitSuffix(problem.problemType);
+            var rdp = problem.roundDecimal || 2;
+            var ansStr = problem.correctAnswer.toFixed(rdp);
             if (correct) {
-                feedbackDiv.innerHTML = '\u2705 <strong>Correct!</strong> The answer is <strong>'+problem.correctAnswer.toFixed(2)+'</strong> '+unit+'.<div class="formula-reveal">\uD83D\uDCDD '+fd+'</div>';
+                feedbackDiv.innerHTML = '\u2705 <strong>Correct!</strong> The answer is <strong>'+ansStr+'</strong> '+unit+'.<div class="formula-reveal">\uD83D\uDCDD '+fd+'</div>';
                 mainCard.classList.add('correct-flash');
                 setTimeout(function(){ mainCard.classList.remove('correct-flash'); }, 600);
                 spawnConfetti();
             } else {
-                feedbackDiv.innerHTML = '\u274C <strong>Not quite.</strong> The correct answer is <strong>'+problem.correctAnswer.toFixed(2)+'</strong> '+unit+'.<div class="formula-reveal">\uD83D\uDCDD '+fd+'</div>';
+                feedbackDiv.innerHTML = '\u274C <strong>Not quite.</strong> The correct answer is <strong>'+ansStr+'</strong> '+unit+'.<div class="formula-reveal">\uD83D\uDCDD '+fd+'</div>';
                 mainCard.classList.add('incorrect-flash');
                 setTimeout(function(){ mainCard.classList.remove('incorrect-flash'); }, 600);
             }
@@ -1099,11 +1440,13 @@
             var userNum = parseExpression(userInput);
             if (isNaN(userNum)) {
                 feedbackDiv.style.display='block'; feedbackDiv.className='feedback show incorrect';
-                feedbackDiv.innerHTML='\u26a0\ufe0f Could not parse. Try a plain number, or use sqrt(\u2026), pi, fractions like 3/4.';
+                feedbackDiv.innerHTML='\u26a0\ufe0f Could not parse. Try a number, sqrt(\u2026), pi, sin/cos/tan(\u2026°), or fractions like 3/4.';
                 return;
             }
             totalAttempts++;
-            var tol = Math.max(0.05, Math.abs(currentProblem.correctAnswer)*0.005);
+            /* Tolerance = half a unit in the last decimal place asked */
+            var rdp = currentProblem.roundDecimal || 2;
+            var tol = 0.5 * Math.pow(10, -rdp);
             var correct = Math.abs(userNum - currentProblem.correctAnswer) <= tol;
             if (correct) { totalCorrect++; score += hintUsed?1:2; streak++; }
             else         { streak=0; score=Math.max(0,score-1); }
